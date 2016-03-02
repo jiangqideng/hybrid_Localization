@@ -1,0 +1,105 @@
+C51 COMPILER V9.01   SERVER                                                                03/18/2014 14:32:26 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE SERVER
+OBJECT MODULE PLACED IN server.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE server.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "IO_def.h"
+   2          #include <reg52.h>
+   3          #include "server.h"
+   4          #include "lcd12864a.h"
+   5          
+   6          void UART_init()
+   7          {
+   8   1              SCON = 0x50;                 /* uart in mode 1 (8 bit), REN=1 串口通信方式1*/
+   9   1              TMOD = TMOD | 0x20 ;         /* Timer 1 in mode 2 */
+  10   1              TH1  = 0xFD;                 /* 9600 Bds at 11.0592MHz */
+  11   1              TL1  = 0xFD;                 /* 9600 Bds at 11.0592MHz */
+  12   1              //IE =0x90;
+  13   1              TR1 = 1;                     /* Timer 1 run */
+  14   1      //      IE=0x90;                                          //开启总中断和串口中断
+  15   1      }
+  16          
+  17          //向上位机发送单个字符
+  18          void Sendchar(unsigned char cha)
+  19          {
+  20   1              SBUF=cha;                                     
+  21   1              while(TI==0); //串行位在接收到停止位时，内部硬件会使RI置1，该语句作用：等待发送数据完成。                
+             -                              
+  22   1              TI=0;             //软件将TI位清零
+  23   1      }
+  24          
+  25          //向上位机发送字符串
+  26          void print_string(unsigned char* p)
+  27          {
+  28   1              while(*p !='\0')
+  29   1              {
+  30   2                Sendchar(*p++);
+  31   2              }
+  32   1      }
+  33          //向上位机发送有符号8位整数，十进制表示
+  34          void Send_int8(int int8)
+  35          {
+  36   1              unsigned char bw,sw,gw;
+  37   1              if(int8>0)
+  38   1              {
+  39   2                      Sendchar('+');
+  40   2              }
+  41   1              else
+  42   1              {
+  43   2                      int8=-int8;
+  44   2                      Sendchar('-');          
+  45   2              }
+  46   1              bw=int8/100;
+  47   1              sw=(int8-100*bw)/10;
+  48   1              gw=int8-100*bw-10*sw;
+  49   1              Sendchar(bw+'0');
+  50   1              Sendchar(sw+'0');
+  51   1              Sendchar(gw+'0');
+  52   1      }
+  53          
+  54          //串口接收从计算机传来的字符
+C51 COMPILER V9.01   SERVER                                                                03/18/2014 14:32:26 PAGE 2   
+
+  55          uchar UART_ReceiveChar()
+  56          {
+  57   1              uchar c;
+  58   1              while(RI==0); //串行位在接收到停止位时，内部硬件会使RI置1，该语句作用：等待计算机往节点发送数据完成。    
+             -                                          
+  59   1              c=SBUF;
+  60   1              RI=0;             //软件将RI位清零
+  61   1              return c;
+  62   1      }
+  63          
+  64          void delay_1ms()
+  65          {
+  66   1              unsigned int i;
+  67   1      
+  68   1              for (i=1; i<(unsigned int)(xtal*142-2); ++i);   //xtal为晶振频率，单位MHz
+  69   1      }
+  70          
+  71          void delay_ms(unsigned int n)
+  72          {
+  73   1              unsigned int i;
+  74   1      
+  75   1              for (i=0; i<n; ++i)
+  76   1                      delay_1ms();
+  77   1      }
+  78          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    219    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       4
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

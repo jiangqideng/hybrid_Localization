@@ -1,0 +1,7 @@
+"STARTUP.obj",
+"1101.obj",
+"LCD12864A.obj",
+"main.obj",
+"server.obj" 
+TO "½Úµã1" 
+RAMSIZE(256) 

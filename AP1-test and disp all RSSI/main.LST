@@ -1,0 +1,237 @@
+C51 COMPILER V9.01   MAIN                                                                  03/11/2014 13:42:57 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <reg52.h>
+   2          #include <intrins.h>
+   3          #include <stdlib.h>
+   4          #include "lcd12864a.h"
+   5          #include "CC1101.h"
+   6          #include "IO_def.h"
+   7          #include "server.h"
+   8          
+   9          //***************更多功率参数设置可详细参考DATACC1100英文文档中第48-49页的参数表******************
+  10          //uchar PaTabel[8] = {0x04 ,0x04 ,0x04 ,0x04 ,0x04 ,0x04 ,0x04 ,0x04};  //-30dBm   功率最小
+  11          //uchar PaTabel[8] = {0x60 ,0x60 ,0x60 ,0x60 ,0x60 ,0x60 ,0x60 ,0x60};  //0dBm
+  12          xdata uchar PaTabel[8] = {0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0};   //10dBm     功率最大
+  13          uchar RSSI;
+  14          extern int j;
+  15          /*int RSSI_to_RSSI_dB(uchar rssi)
+  16          {       if(rssi>=128)
+  17                          return (RSSI-255)/2-74;
+  18                  else
+  19                          return RSSI/2-74; 
+  20           }      */
+  21          
+  22          void main()
+  23          {
+  24   1                      uchar ss=1;
+  25   1      xdata   uchar leng=10;
+  26   1      xdata   uchar tt=0;
+  27   1      xdata   uchar TxBuf[6]={0};      // 8字节, 如果需要更长的数据包,请正确设置
+  28   1      xdata   uchar RxBuf[8]={0};
+  29   1      xdata   uchar biaohao=0;
+  30   1          BELL =1;             //不响铃
+  31   1              LED1=0;                  //开灯
+  32   1              LED2=0;
+  33   1      //      UART_init();
+  34   1          back_lcd=0;           //液晶背光开
+  35   1          lcd_init();
+  36   1              delay1();
+  37   1          delay1();
+  38   1          delay1();
+  39   1          disdate_a(0x00,0x00);
+  40   1              delay1();
+  41   1          delay1();
+  42   1          delay1();
+  43   1      //  entermenu();              /*-----开机显示  天津大学欢迎您！ -----*/
+  44   1              delay1();
+  45   1          delay1();
+  46   1          delay1();
+  47   1      //    disdate_a(0x00,0x00);
+  48   1      //   back_lcd=1;                        //液晶背光关
+  49   1      
+  50   1              CpuInit();
+  51   1              POWER_UP_RESET_CC1101();
+  52   1              halRfWriteRfSettings();
+  53   1              halSpiWriteBurstReg(CC1101_PATABLE, PaTabel, 8);        // CC1101_PATABLE=0011 1111
+  54   1              LED1=1;
+  55   1              //TxBuf[0] = 8 ;
+C51 COMPILER V9.01   MAIN                                                                  03/11/2014 13:42:57 PAGE 2   
+
+  56   1      //      TxBuf[1] = 1 ;
+  57   1      //      TxBuf[2] = 1 ;
+  58   1      //      halRfSendPacket(TxBuf,8);       // Transmit Tx buffer data
+  59   1      //      delay_ms(200);
+  60   1          BELL = 1;   
+  61   1              LED1=1;
+  62   1              LED2=1;
+  63   1      
+  64   1              TMOD = TMOD | 0x10;
+  65   1              TH1=0x3c;
+  66   1              TL1=0xb0;
+  67   1              TF1=0;
+  68   1              TR1=1;
+  69   1      
+  70   1              TxBuf[1]=0xFF;
+  71   1              TxBuf[3]=0xFF;                                                           
+  72   1                      biaohao++;                                                                                                         //第一次数据
+  73   1                      TxBuf[5]=biaohao;                       
+  74   1                      LED1=~LED1;
+  75   1      //              SendPacket(TxBuf,8,0);
+  76   1                                              {       TxBuf[4]=0x00;
+  77   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  78   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  79   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  80   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  81   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  82   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  83   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  84   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  85   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+  86   2                                                      TxBuf[4]=0xFF;
+  87   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(6);
+  88   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(6);
+  89   2                                                      halRfSendPacket(TxBuf,6);       delay_ms(6);
+  90   2                                                      halRfSendPacket(TxBuf,6);       
+  91   2                                              }
+  92   1                      LED1=~LED1;
+  93   1                      Dispchar(biaohao%256,7,30);
+  94   1                      tt=0;
+  95   1      
+  96   1              while(1)
+  97   1              {       
+  98   2      
+  99   2      
+ 100   2                       if(TF1==1)
+ 101   2                       {      tt++;
+ 102   3                              if(tt==20)
+ 103   3                              {               biaohao++;
+ 104   4                                              TxBuf[5]=biaohao;                       
+ 105   4                                              LED1=~LED1;
+ 106   4      //                                      SendPacket(TxBuf,8,0);
+ 107   4                                              {       TxBuf[4]=0x00;
+ 108   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 109   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 110   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 111   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 112   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 113   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 114   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 115   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 116   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(8);
+ 117   5                                                      TxBuf[4]=0xFF;
+C51 COMPILER V9.01   MAIN                                                                  03/11/2014 13:42:57 PAGE 3   
+
+ 118   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(6);
+ 119   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(6);
+ 120   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(6);
+ 121   5                                                      halRfSendPacket(TxBuf,6);       
+ 122   5                                              }
+ 123   4                                              LED1=~LED1;
+ 124   4                                              Dispchar(biaohao%256,7,30);
+ 125   4                                              tt=0;                                   
+ 126   4                              }
+ 127   3                              TH1=0x3c;
+ 128   3                              TL1=0xb0;
+ 129   3                              TF1=0;                                                                                   
+ 130   3                       }
+ 131   2                              
+ 132   2                              
+ 133   2                              if(ReceivePacket(RxBuf,&leng))          
+ 134   2                              { 
+ 135   3                               Dispchar(ss,3,30);                                       //测试，用来观察收到几个返回的数据包
+ 136   3                               if(RxBuf[5]==biaohao)                                                                                   //返回的第一个数据包，节点2345的RSSI  ，测试用
+ 137   3                               {      LED2=~LED2;
+ 138   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[3]),7,120);
+ 139   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[4]),5,120);
+ 140   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[6]),3,120);
+ 141   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[7]),1,120);
+ 142   4      //                              Dispchar(RxBuf[1],1,30);//附近最近节点。
+ 143   4                                      Dispchar(RxBuf[3],7,120);
+ 144   4                                      Dispchar(RxBuf[4],5,120);
+ 145   4                                      Dispchar(RxBuf[6],3,120);
+ 146   4                                      Dispchar(RxBuf[7],1,120);
+ 147   4                                      Dispchar(RxBuf[1],1,30);//附近最近节点。
+ 148   4                                      ss++;
+ 149   4                                      LED2=~LED2;
+ 150   4                               }
+ 151   3                               if(RxBuf[5]==biaohao+1)                                                                                //返回的第二个数据包。节点6789的RSSI ，测试用
+ 152   3                               {      LED2=~LED2;
+ 153   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[3]),7,80);
+ 154   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[4]),5,80);
+ 155   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[6]),3,80);
+ 156   4      //                              Dispchar(RSSI_to_RSSI_dB(RxBuf[7]),1,80);
+ 157   4      //                              Dispchar(RxBuf[1],1,30);//附近最近节点。
+ 158   4                                      Dispchar(RxBuf[3],7,90);
+ 159   4                                      Dispchar(RxBuf[4],5,90);
+ 160   4                                      Dispchar(RxBuf[6],3,90);
+ 161   4                                      Dispchar(RxBuf[7],1,90);
+ 162   4                                      Dispchar(RxBuf[1],1,30);//附近最近节点。
+ 163   4                                      ss++;
+ 164   4                                      LED2=~LED2;
+ 165   4                               }
+ 166   3                                      if(RxBuf[5]==biaohao+2)                                                  //返回的第三个数据包，上位机发送的位置信息
+ 167   3                               {      LED2=~LED2;
+ 168   4      //                              Dispchar(RxBuf[3],3,40);
+ 169   4      //                              Dispchar(RxBuf[4],5,40);
+ 170   4      //                              Dispchar(RxBuf[6],3,40);
+ 171   4      //                              Dispchar(RxBuf[7],1,40);
+ 172   4      //                              Dispchar(RxBuf[1],1,40);//附近最近节点。
+ 173   4                                      Dispchar(RxBuf[3],7,60);
+ 174   4                                      Dispchar(RxBuf[4],5,60);
+ 175   4                                      Dispchar(RxBuf[6],3,60);
+ 176   4                                      Dispchar(RxBuf[7],1,60);
+ 177   4                                      Dispchar(RxBuf[1],1,30);//附近最近节点。
+ 178   4                                      ss++;
+ 179   4                                      LED2=~LED2;
+C51 COMPILER V9.01   MAIN                                                                  03/11/2014 13:42:57 PAGE 4   
+
+ 180   4      
+ 181   4      
+ 182   4      
+ 183   4                                              biaohao++;
+ 184   4                                              TxBuf[5]=biaohao;                       
+ 185   4                                              LED1=~LED1;
+ 186   4      //                                      SendPacket(TxBuf,8,0);
+ 187   4                                              {       TxBuf[4]=0x00;
+ 188   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 189   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 190   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 191   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 192   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 193   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 194   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 195   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 196   5                                                      halRfSendPacket(TxBuf,6);       delay_ms(10);
+ 197   5                                                      TxBuf[4]=0xFF;
+ 198   5                                                      halRfSendPacket(TxBuf,6);       
+ 199   5                                              }
+ 200   4                                              LED1=~LED1;
+ 201   4                                              Dispchar(biaohao%256,7,30);
+ 202   4                                              tt=0;                                   
+ 203   4      
+ 204   4      
+ 205   4                               }
+ 206   3                               }
+ 207   2              }
+ 208   1              }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1263    ----
+   CONSTANT SIZE    =     14    ----
+   XDATA SIZE       =      8      17
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      1       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

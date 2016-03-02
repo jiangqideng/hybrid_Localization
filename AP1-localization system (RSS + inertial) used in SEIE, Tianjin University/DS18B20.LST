@@ -1,0 +1,169 @@
+C51 COMPILER V9.01   DS18B20                                                               04/08/2014 15:33:28 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE DS18B20
+OBJECT MODULE PLACED IN DS18B20.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE DS18B20.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "DS18B20.h"
+   2          #include <intrins.h>
+   3          
+   4          #include "DS18B20.h"
+   5          #include "cc1100.h"
+*** WARNING C318 IN LINE 5 OF DS18B20.c: can't open file 'cc1100.h'
+   6          
+   7          
+   8          unsigned char tempL=0; //设全局变量
+   9          unsigned char tempH=0; 
+  10          unsigned char integer = 0;//测量到的温度的整数部分
+  11          unsigned char decimal1 = 0;//小数第一位
+  12          unsigned char decimal2 = 0;//小数第二位
+  13          unsigned char decimal = 0;//两位小数
+  14          unsigned char fg =0;
+  15          
+  16          
+  17          
+  18          void delay_n_us(unsigned char n)
+  19          {
+  20   1              unsigned char i = 0;
+  21   1              for (i=0; i<n-1; ++i)
+  22   1              {
+  23   2                      _nop_();
+  24   2              }
+  25   1      }
+  26          /******************************************************************************/
+  27          void Delay_us(unsigned char i)//延时函数                 num = 1  18.44 us 4   48us  8 65us       10  77.04us   100   663us
+  28          {
+  29   1              while(i--);
+  30   1      
+  31   1      }       
+  32          /******************************************************************************/
+  33          void Init_DS18B20(void)//初始化ds1820
+  34          {
+  35   1              unsigned char x=0;
+  36   1      
+  37   1              DQ = 1;    //DQ复位
+  38   1              //Delay_us(8);  //稍做延时
+  39   1              delay_n_us(10);
+  40   1              DQ = 0;    //单片机将DQ拉低
+  41   1              //Delay_us(80); //精确延时 大于 480us
+  42   1              delay_n_us(480);
+  43   1              DQ = 1;    //拉高总线
+  44   1      //      Delay_us(8);      //65us
+  45   1              delay_n_us(65);
+  46   1      
+  47   1              //x = DQ;      //稍做延时后 如果x=0则初始化成功 x=1则初始化失败
+  48   1              while (DQ == 0);
+  49   1      
+  50   1      
+  51   1              Delay_us(20);
+  52   1      }
+  53          /******************************************************************************/
+  54          unsigned char ReadOneChar_18B20(void)//读一个字节
+C51 COMPILER V9.01   DS18B20                                                               04/08/2014 15:33:28 PAGE 2   
+
+  55          {
+  56   1              unsigned char i=0;
+  57   1              unsigned char dat = 0;
+  58   1              for (i=8;i>0;i--)
+  59   1              {
+  60   2                      DQ = 0; // 给脉冲信号
+  61   2                      dat>>=1;
+  62   2                      DQ = 1; // 给脉冲信号
+  63   2                      if(DQ)
+  64   2                      dat|=0x80;
+  65   2                      //Delay_us(4);
+  66   2                      delay_n_us(60);
+  67   2              }
+  68   1              return(dat);
+  69   1      }
+  70          /******************************************************************************/
+  71          void WriteOneChar_18B20(unsigned char dat)//写一个字节
+  72          {                                                                               //数据线从高电平拉至低电平，产生写起始信号。15us之内将所需写的位送到数据线上
+  73   1              unsigned char i=0;
+  74   1              for (i=8; i>0; i--)
+  75   1              {
+  76   2                      DQ = 0;
+  77   2                      DQ = dat&0x01;
+  78   2                      //Delay_us(5);
+  79   2                  delay_n_us(60);
+  80   2                      DQ = 1;
+  81   2                      dat>>=1;
+  82   2              }
+  83   1      }
+  84          /******************************************************************************/
+  85          void Adjust_res_18B20(char res) ///res 分别等于 0x1f, 0x3f, 0x5f 温度读数分辨率分别对应
+  86                                     //              0.5, 0.25, 0.125   
+  87          {
+  88   1        Init_DS18B20();        //复位
+  89   1        WriteOneChar_18B20(0xcc);  //跳过Rom
+  90   1       WriteOneChar_18B20(0x4e);  //写暂存器
+  91   1       WriteOneChar_18B20(0x02);  //写TH 
+  92   1       WriteOneChar_18B20(0x01);  //写TL
+  93   1        //WriteOneChar_18B20(0x5f);  //写结构寄存器
+  94   1        WriteOneChar_18B20(res);
+  95   1        Init_DS18B20();       //复位
+  96   1        WriteOneChar_18B20(0xcc); //跳过Rom 
+  97   1        WriteOneChar_18B20(0x48); //把暂存器内容写到EPRam中
+  98   1      }
+  99          
+ 100          /********************************************************************************/
+ 101          void ReadTemperature(void)//读取温度
+ 102          {
+ 103   1              //unsigned char a=0;
+ 104   1              //unsigned char b=0;
+ 105   1              //unsigned int t=0;
+ 106   1              //float tt=0;
+ 107   1              Init_DS18B20();
+ 108   1              WriteOneChar_18B20(0xCC); // 跳过读序号列号的操作
+ 109   1              WriteOneChar_18B20(0x44); // 启动温度转换
+ 110   1              delay_ms(800);
+ 111   1              Init_DS18B20();
+ 112   1              WriteOneChar_18B20(0xCC); //跳过读序号列号的操作
+ 113   1              WriteOneChar_18B20(0xBE); //读取温度寄存器
+ 114   1      
+ 115   1              tempL=ReadOneChar_18B20(); //读出温度的低位LSB
+ 116   1              tempH=ReadOneChar_18B20(); //读出温度的高位MSB 
+C51 COMPILER V9.01   DS18B20                                                               04/08/2014 15:33:28 PAGE 3   
+
+ 117   1        
+ 118   1              if(tempH>0x7f)      //最高位为1时温度是负
+ 119   1              {
+ 120   2                      tempL=~tempL;         //补码转换，取反加一
+ 121   2                      tempH=~tempH+1;       
+ 122   2                      fg=0;      //读取温度为负时fg=0
+ 123   2          }
+ 124   1              integer = tempL/16+tempH*16;      //整数部分
+ 125   1              decimal1 = (tempL&0x0f)*10/16; //小数第一位
+ 126   1              decimal2 = (tempL&0x0f)*100/16%10;//小数第二位
+ 127   1              decimal=decimal1*10+decimal2; //小数两位
+ 128   1              /*
+ 129   1              a=ReadOneChar_18B20();  //读低8位
+ 130   1              b=ReadOneChar_18B20(); //读高8位
+ 131   1              t=b;
+ 132   1              t<<=8;
+ 133   1              t=t|a;
+ 134   1              tt=t*0.0625;
+ 135   1              t= tt*10+0.5; //放大10倍输出并四舍五入
+ 136   1              return(t);
+ 137   1              */
+ 138   1      
+ 139   1      
+ 140   1      }
+ 141          /******************************************************************************/
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    285    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

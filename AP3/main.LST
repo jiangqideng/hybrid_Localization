@@ -1,0 +1,202 @@
+C51 COMPILER V9.00   MAIN                                                                  05/02/2014 20:32:22 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <reg52.h>
+   2          #include <intrins.h>
+   3          #include <stdlib.h>
+   4          #include "lcd12864a.h"
+   5          #include "CC1101.h"
+   6          #include "IO_def.h"
+   7          #include "server.h"
+   8          
+   9          //***************更多功率参数设置可详细参考DATACC1100英文文档中第48-49页的参数表******************
+  10          //uchar PaTabel[8] = {0x04 ,0x04 ,0x04 ,0x04 ,0x04 ,0x04 ,0x04 ,0x04};  //-30dBm   功率最小
+  11          //uchar PaTabel[8] = {0x60 ,0x60 ,0x60 ,0x60 ,0x60 ,0x60 ,0x60 ,0x60};  //0dBm
+  12          uchar PaTabel[8] = {0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0 ,0xC0};   //10dBm     功率最大
+  13          uchar RSSI;
+  14          // char RSSI_dB;
+  15           uint RSSI_sum=0;
+  16          // int RSSI_dB_sum=0;
+  17          
+  18          void main()
+  19          {       uchar s=0,ss=0;         //用来测RSSI时计数
+  20   1              int RSSI_sum=0;
+  21   1              int m=0;
+  22   1              uchar biaohao=0;
+  23   1              uchar bh[9]={0};
+  24   1              uchar bh_i;
+  25   1              uchar leng;
+  26   1              uchar TxBuf[13]={0};     // 8字节, 如果需要更长的数据包,请正确设置
+  27   1              uchar RxBuf[13]={0};
+  28   1              uchar RSSI_mem[10]={0};
+  29   1              int i=0;                 //测试用，计数变量
+  30   1          BELL =1;             //不响铃
+  31   1              LED1=0;                  //开灯
+  32   1              LED2=0;
+  33   1              UART_init();
+  34   1          back_lcd=0;           //液晶背光开
+  35   1          lcd_init();
+  36   1              delay1();
+  37   1          delay1();
+  38   1          delay1();
+  39   1          disdate_a(0x00,0x00);
+  40   1              delay1();
+  41   1          delay1();
+  42   1          delay1();
+  43   1       //   entermenu();              /*-----开机显示  天津大学欢迎您！ -----*/
+  44   1              delay1();
+  45   1          delay1();
+  46   1          delay1();
+  47   1      //    disdate_a(0x00,0x00);
+  48   1          back_lcd=1;                 //液晶背光关
+  49   1      
+  50   1              CpuInit();
+  51   1              POWER_UP_RESET_CC1101();
+  52   1              halRfWriteRfSettings();
+  53   1              halSpiWriteBurstReg(CC1101_PATABLE, PaTabel, 8);        // CC1101_PATABLE=0011 1111
+  54   1              LED1=1;
+  55   1              //TxBuf[0] = 8 ;
+C51 COMPILER V9.00   MAIN                                                                  05/02/2014 20:32:22 PAGE 2   
+
+  56   1      //      TxBuf[1] = 1 ;
+  57   1      //      TxBuf[2] = 1 ;
+  58   1      //      halRfSendPacket(TxBuf,8);       // Transmit Tx buffer data
+  59   1      //      delay_ms(200);
+  60   1          BELL = 1;   
+  61   1              LED1=1;
+  62   1              LED2=1;
+  63   1      /*      while (1)                                                                           
+  64   1              {                                                                                               
+  65   1                      if(halRfReceivePacket(RxBuf,&leng))                                       //读出数据存到RxBuf中
+  66   1                      {
+  67   1      
+  68   1                                      Send_int8(RxBuf[0]);
+  69   1                                      Send_int8(RxBuf[1]);
+  70   1                                      Send_int8(RxBuf[2]);
+  71   1                                      Send_int8(RxBuf[3]);
+  72   1                                      Send_int8(RxBuf[4]);
+  73   1                                      Send_int8(RxBuf[5]);
+  74   1      //                              Send_int8(RxBuf[6]);
+  75   1      //                              Send_int8(RxBuf[7]);
+  76   1      //                              Send_int8(RxBuf[8]);
+  77   1      //                              Send_int8(RxBuf[9]);
+  78   1      //                              Send_int8(RxBuf[10]);
+  79   1                                      print_string("\n") ;
+  80   1                       }}                             */
+  81   1      
+  82   1      
+  83   1              while (1)                                                                           
+  84   1              {                                                                                               
+  85   2                      if(halRfReceivePacket(RxBuf,&leng))                                       //读出数据存到RxBuf中
+  86   2                      {        
+  87   3      
+  88   3                              if(RxBuf[1]!=0xFF && (RxBuf[2]==2))                                                     //如果是返回给用户的信息
+  89   3                               {      
+  90   4                                      if(RxBuf[1]==halSpiReadStatus(CC1101_ADDR))                       //如果本节点离用户节点最近
+  91   4                                      {       LED1=~LED1;
+  92   5                                              SendPacket(RxBuf,11,1);
+  93   5                                              LED1=~LED1;
+  94   5                                      }
+  95   4                                      else 
+  96   4                                      {       LED1=~LED1;
+  97   5                                              SendPacket(RxBuf,11,4);
+  98   5                                              LED1=~LED1;
+  99   5                                      }         
+ 100   4                               }
+ 101   3      
+ 102   3      
+ 103   3                              /*先判断是否重复信息*/
+ 104   3                               
+ 105   3                              else if(RxBuf[5]==biaohao  &&  ((RxBuf[0]!=0 &&bh[RxBuf[3]-2]==1) || (RxBuf[0]==0 && bh[halSpiReadStatu
+             -s(CC1101_ADDR)-2])))
+ 106   3                               {      }
+ 107   3                                      else
+ 108   3                                      {
+ 109   4      
+ 110   4                                      if(RxBuf[0]==0 &&       RxBuf[3]==0xFF)                  //如果是RSSI采集过程中的广播信号
+ 111   4                                      {       RSSI_mem[s]=RSSI; s++  ;
+ 112   5      //                                      if(RxBuf[4]==0xFF || s==10)     
+ 113   5                                              if( s>=1)
+ 114   5                                              {       TxBuf[1]=0xFF;
+ 115   6                                                      TxBuf[3]=halSpiReadStatus(CC1101_ADDR);   //将本节点地址写入，表示产生RSSI的节点
+ 116   6                                                      
+C51 COMPILER V9.00   MAIN                                                                  05/02/2014 20:32:22 PAGE 3   
+
+ 117   6                                                      TxBuf[5]=RxBuf[5];                                                //信息的标号
+ 118   6      
+ 119   6                                                      RSSI_sum=0;                                                                //求RSSI均值
+ 120   6                                                      for(ss=0;ss<s;ss++)
+ 121   6                                                      {RSSI_sum=RSSI_sum+RSSI_mem[ss];}
+ 122   6                                                      TxBuf[4]=RSSI_sum/s;
+ 123   6      
+ 124   6       //新加：
+ 125   6                                                      TxBuf[6]=RxBuf[6];
+ 126   6                                                      TxBuf[7]=RxBuf[7];
+ 127   6                                                      TxBuf[8]=RxBuf[8];
+ 128   6                                                      TxBuf[9]=RxBuf[9];
+ 129   6                                                      TxBuf[10]=RxBuf[10];
+ 130   6       //
+ 131   6      
+ 132   6                                                      Dispchar(i%256,7,48);
+ 133   6                                                      Dispchar(RxBuf[5],5,48);
+ 134   6                                                      delay_ms(63);
+ 135   6                                                      LED2=~LED2;
+ 136   6      //改动
+ 137   6                                                      SendPacket(TxBuf,11,4);                                   //发送给下一地址的节点 （不同节点在这里目的地址需要改动）
+ 138   6                                                      LED2=~LED2;
+ 139   6                                                      i++;
+ 140   6                                                      bh[halSpiReadStatus(CC1101_ADDR)-2]=1;
+ 141   6                                                      s=0;
+ 142   6                                                      for(s=0;s<6;s++)                                 //这里借用s一下
+ 143   6                                                      {       TxBuf[s]=128;                            //置初值
+ 144   7                                                      }
+ 145   6                                                      s=0;
+ 146   6      
+ 147   6                                              }
+ 148   5                                              
+ 149   5                                      }
+ 150   4      
+ 151   4                                      else if(RxBuf[2]==2)                                    //本网络中只有这两种，不是广播信号就上上一节点发来的信号
+ 152   4                                      {
+ 153   5                                      LED1=~LED1;     
+ 154   5      //改动
+ 155   5                                      SendPacket(RxBuf,11,4);                                   //发送给下一地址的节点  （不同节点在这里目的地址需要改动）
+ 156   5                                      LED1=~LED1;
+ 157   5                                      Dispchar(i%256,5,48); 
+ 158   5                                      bh[RxBuf[3]-2]=1;
+ 159   5                                      }
+ 160   4      
+ 161   4      
+ 162   4                                      if(biaohao!=RxBuf[5])
+ 163   4                                      {       biaohao=RxBuf[5];
+ 164   5                                              for(bh_i=0;bh_i<9;bh_i++)
+ 165   5                                              {
+ 166   6                                              bh[bh_i]=0;
+ 167   6                                              }
+ 168   5                                      }
+ 169   4                              }                       
+ 170   3                      }
+ 171   2              }
+ 172   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    796    ----
+   CONSTANT SIZE    =     45    ----
+   XDATA SIZE       =     11      56
+C51 COMPILER V9.00   MAIN                                                                  05/02/2014 20:32:22 PAGE 4   
+
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
