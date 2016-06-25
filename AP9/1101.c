@@ -46,7 +46,7 @@ const RF_SETTINGS rfSettings =
 
     0x06,   // PKTCTRL1  Packet automation control.
     0x05,   // PKTCTRL0  Packet automation control.
-    0x09,   // ADDR      Device address.
+    0x01,   // ADDR      Device address.
     0xFF,   // PKTLEN    Packet length.
 };
 
@@ -389,37 +389,34 @@ void setRxMode()
     return 0;	
 }  */
 
-char halRfReceivePacket(uchar *rxBuffer, uchar *length) 
-{
-    uchar status[2];
-    uchar packetLength;
-	uchar i=(*length)*20;  // 具体多少要根据datarate和length来决定		
+char halRfReceivePacket(uchar *rxBuffer, uchar *length) {
+	uchar status[2];
+	uchar packetLength;
+	uchar i = (*length) * 20; // 具体多少要根据datarate和length来决定		
 
-    halSpiStrobe(CC1101_SRX);		//进入接收状态
+	halSpiStrobe (CC1101_SRX); //进入接收状态
 	//delay(5);
-    //while (!GDO1);
-    //while (GDO1);
+	//while (!GDO1);
+	//while (GDO1);
 	delay(2);
-	while (GDO0)
-	{
+	while (GDO0) {
 		delay(2);
 		--i;
-		if(i<1)
-		   return -1; 	    
-	}	 
-    if ((halSpiReadStatus(CC1101_RXBYTES) & BYTES_IN_RXFIFO)) 		//如果接的字节数不为0 ,BYTES_IN_RXFIFO=0111 1111
+		if (i < 1)
+			return -1;
+	}
+	if ((halSpiReadStatus(CC1101_RXBYTES) & BYTES_IN_RXFIFO)) //如果接的字节数不为0 ,BYTES_IN_RXFIFO=0111 1111
 	{
-        packetLength = halSpiReadReg(CC1101_RXFIFO);				//读出第一个字节，此字节为该帧数据长度		
-        if (packetLength <= *length) 								//如果帧数据长度小于等于用户设置的长度 
-		{
-			
+		packetLength = halSpiReadReg(CC1101_RXFIFO); //读出第一个字节，此字节为该帧数据长度		
+		if (packetLength <= *length) //如果帧数据长度小于等于用户设置的长度 
+				{
 			halSpiReadBurstReg(CC1101_RXFIFO, rxBuffer, packetLength); //读出所有接收到的数据，存到rxBuffer中
-            *length = packetLength;									//把接收数据长度的修改为当前数据的长度
+			*length = packetLength; //把接收数据长度的修改为当前数据的长度
 //            // Read the 2 appended status bytes (status[0] = RSSI, status[1] = LQI)
-            halSpiReadBurstReg(CC1101_RXFIFO, status, 2); 			//读出CRC校验位和RSSI值
-			halSpiStrobe(CC1101_SFRX);								//清洗接收缓冲区
+			halSpiReadBurstReg(CC1101_RXFIFO, status, 2); //读出CRC校验位和RSSI值
+			halSpiStrobe (CC1101_SFRX); //清洗接收缓冲区
 //			RSSI_dB=GetRSSI();											//因为函数返回值可能为负值，所以暂不采用此语句
-			RSSI=status[0];											//按照正数传输，将正确值的处理交给中心计算机
+			RSSI = status[0]; //按照正数传输，将正确值的处理交给中心计算机
 //			Dispchar(GetRSSI(),7,120);								//测试用
 //			Dispchar(status[1],7,30);
 //			Dispchar(status[0],5,30); 								//测试用
@@ -429,20 +426,17 @@ char halRfReceivePacket(uchar *rxBuffer, uchar *length)
 //			Send_int8(status[0]);
 //			if(rxBuffer[0]!=6&&rxBuffer[0]!=10)
 //				return -1;
-            if(status[1] & CRC_OK)
-				return 1;						//如果校验成功返回接收成功
+			if (status[1] & CRC_OK)
+				return 1; //如果校验成功返回接收成功
 			else
 				return 0;
-        }
-		 else 
-		{
-            *length = packetLength;
-            halSpiStrobe(CC1101_SFRX);								//清洗接收缓冲区
-            return 0;
-        }
-    } 
-	else
- 	return 0;
+		} else {
+			*length = packetLength;
+			halSpiStrobe (CC1101_SFRX); //清洗接收缓冲区
+			return 0;
+		}
+	} else
+		return 0;
 }
 
 /*****************************************************************************************
@@ -451,74 +445,64 @@ char halRfReceivePacket(uchar *rxBuffer, uchar *length)
 //输出：带符号的RSSI值
 //功能描述：RSSI为2的补码，使之转化成16进制数
 *****************************************************************************************/
-int GetRSSI()
-{
+int GetRSSI() {
 	uchar RSSI;
-	char  RSSI_dB;
-	RSSI=halSpiReadStatus(CC1101_RSSI);
-	if(RSSI>=128)
-		RSSI_dB=(RSSI-255)/2-74;
+	char RSSI_dB;
+	RSSI = halSpiReadStatus(CC1101_RSSI);
+	if (RSSI >= 128)
+		RSSI_dB = (RSSI - 255) / 2 - 74;
 	else
-		RSSI_dB=RSSI/2-74;
+		RSSI_dB = RSSI / 2 - 74;
 	return RSSI_dB;
 }
 
-uchar SendPacket(uchar *txbuffer,uchar size,uchar address)
-{	
-	xdata uchar rxbuffer[8]={0};
-	uchar length=8;
-	uchar m=0;//重发次数
+uchar SendPacket(uchar *txbuffer, uchar size, uchar address) {
+	xdata uchar rxbuffer[8] = { 0 };
+	uchar length = 8;
+	uchar m = 4; //重发次数
 	TMOD = TMOD | 0x01;
-//	TH0=0x8A;
-//	TL0=0xD0;
-			TH0=0xd8;
-			TL0=0xf0;
-//			TH0=0xc5;
-//			TL0=0x68;
-		 
-	TF0=0;
+	TH0 = 0x00;
+	TL0 = 0x00;
 
-	txbuffer[0]=address;					 //设定第一个字节为目的节点地址，第三字节为本节点地址
-	txbuffer[2]=halSpiReadStatus(CC1101_ADDR);
-	halRfSendPacket(txbuffer,size);
-		TR0=1;
-	while(m)								//括号里若是m，则表示重发m次
+	TF0 = 0;
+
+	txbuffer[0] = address; //设定第一个字节为目的节点地址，第三字节为本节点地址
+	txbuffer[2] = halSpiReadStatus(CC1101_ADDR);
+	halRfSendPacket(txbuffer, size);
+	TR0 = 1;
+	while (m) //括号里若是m，则表示重发m次
 	{
-		if(halRfReceivePacket(rxbuffer,&length))
-		{
-			if(rxbuffer[1]==0x00)										
+		if (halRfReceivePacket(rxbuffer, &length)) {
+			if (rxbuffer[1] == 0x00)
 				return 1;
-
 		}
-		if(TF0==1)
-		{	j++;
+		if (TF0 == 1) {
+			j++;
 			m--;
-			Dispchar(j,7,98);
-			halRfSendPacket(txbuffer,size);
-			TH0=0xd8;
-			TL0=0xf0;
-//			TH0=0xc5;
-//			TL0=0x68;
-			  
-			TF0=0;
-		}		
+//			Dispchar(j,5,30);
+			halRfSendPacket(txbuffer, size);
+			TH0 = 0x00;
+			TL0 = 0x00;
+//			TH0=0x8a;
+//			TL0=0xd0;
+			TF0 = 0;
+		}
 	}
-	return 0;	
+	return 0;
 }
   
-uchar ReceivePacket(uchar *rxbuffer,uchar *length)
-{
-	xdata uchar txbuffer[8]={0};
-	uchar size=3;
-	if(halRfReceivePacket(rxbuffer,length))
-	{	txbuffer[0]=rxbuffer[2];
-		txbuffer[1]=0x00;				  
-		txbuffer[2]=halSpiReadStatus(CC1101_ADDR);
-		if(rxbuffer[0]!=0)
-		{halRfSendPacket(txbuffer,size); }
+uchar ReceivePacket(uchar *rxbuffer, uchar *length) {
+	xdata uchar txbuffer[8] = { 0 };
+	uchar size = 3;
+	if (halRfReceivePacket(rxbuffer, length)) {
+		txbuffer[0] = rxbuffer[2];
+		txbuffer[1] = 0x00;
+		txbuffer[2] = halSpiReadStatus(CC1101_ADDR);
+		if (rxbuffer[0] != 0) {
+			halRfSendPacket(txbuffer, size);
+		}
 		return 1;
-	}
-	else
-	return 0;
+	} else
+		return 0;
 }
  
